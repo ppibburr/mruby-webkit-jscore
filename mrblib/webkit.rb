@@ -19,7 +19,7 @@ end
 module JS
   module JS::Object
     def is_node_list
-      if JS.execute(context,"this instanceof NodeList;",self) == true
+      if JS.execute(context,"Object.prototype.toString.call(this) == '[object NodeList]';",self)
         return true
       end
    
