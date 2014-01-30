@@ -51,5 +51,3 @@ module JS
     end
   end
 end
-
-
