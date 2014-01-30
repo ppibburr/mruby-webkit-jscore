@@ -1,12 +1,16 @@
-GirBind.ensure(:WebKit)
+unless ::Object.const_defined?(:WebKit)
+  GirFFI::setup :WebKit
+end
 
 module WebKit
-  load_class(:WebFrame) do
-    f = FFIBind::Function.add_function(WebKit.ffi_lib,"webkit_web_frame_get_global_context",[:pointer],:pointer)
+  self::WebFrame
   
+  self::Lib.attach_function :webkit_web_frame_get_global_context,[:pointer],:pointer
+  
+  class WebFrame
     define_method :get_global_context do
-      ptr = f.invoke(self)
-      ctx = JS::JSGlobalContext.wrap(ptr)
+      ptr = WebKit::Lib.send(:webkit_web_frame_get_global_context, self.to_ptr)
+      ctx = JavaScriptCore::GlobalContext.wrap(ptr)
       next ctx
     end
   end
@@ -15,10 +19,11 @@ end
 module JS
   module JS::Object
     def is_node_list
-	  if context.execute("this instanceof NodeList;",self) == true
-		return true
-	   end
-	   return false
+      if JS.execute(context,"this instanceof NodeList;",self) == true
+        return true
+      end
+   
+      return false
     end
   end
   
@@ -31,17 +36,20 @@ module JS
     end
   end
   
-  class JS::JSValue
-    alias :__to_ruby__ :to_ruby
-    def to_ruby
-      if is_object and (o=to_object(nil)).is_node_list
+  module JS::Value
+    class << self
+      alias :__to_ruby__ :to_ruby
+    end
+    
+    def self.to_ruby v,ctx=nil
+      if v.getType == JavaScriptCore::ValueType::OBJECT and (o=__to_ruby__(v,ctx)).is_node_list
         o.extend JS::ObjectIsNodeList
         return o
       end
 
-      return __to_ruby__
+      return __to_ruby__(v, ctx)
     end
   end
 end
 
-JS::Object.use_method_missing
+
